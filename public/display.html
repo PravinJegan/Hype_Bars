@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hype Bars — Main Screen</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f0f14; color: #fff;
+      display: flex; flex-direction: column; padding: 3vh 4vw; gap: 3vh;
+    }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 2rem; flex-wrap: wrap; }
+    h1 { margin: 0; font-size: clamp(2rem, 5vw, 4rem); }
+    .join { display: flex; align-items: center; gap: 1rem; font-size: clamp(1rem, 1.6vw, 1.5rem); color: #d1d5db; }
+    .join img { width: clamp(90px, 10vw, 160px); background: #fff; padding: 6px; border-radius: 8px; }
+    .join b { color: #fff; display: block; font-size: 1.1em; }
+    #chart { flex: 1; display: flex; align-items: flex-end; justify-content: center; gap: 4vw; min-height: 0; }
+    .col { flex: 1; max-width: 220px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 1vh; }
+    .count { font-size: clamp(1.5rem, 4vw, 3.5rem); font-weight: 800; font-variant-numeric: tabular-nums; }
+    .track { width: 100%; flex: 1; display: flex; align-items: flex-end; }
+    .bar {
+      width: 100%; height: 0%; border-radius: 14px 14px 4px 4px;
+      transition: height .25s cubic-bezier(.2,.9,.3,1.2);
+      box-shadow: 0 0 30px var(--glow);
+    }
+    .bar.bump { animation: bump .2s; }
+    @keyframes bump { 50% { filter: brightness(1.5); } }
+    .label { font-size: clamp(1rem, 2vw, 1.6rem); font-weight: 600; text-align: center; }
+    footer { display: flex; justify-content: space-between; color: #6b7280; font-size: .9rem; }
+    footer button { background: #1f2937; color: #d1d5db; border: 1px solid #374151; border-radius: 8px; padding: 6px 14px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🔥 Hype Bars</h1>
+    <div class="join">
+      <div>Scan or go to<b id="joinUrl">…</b></div>
+      <img id="qr" alt="QR code to join" />
+    </div>
+  </header>
+  <div id="chart"></div>
+  <footer>
+    <span id="players">0 connected</span>
+    <button id="reset" hidden>Reset</button>
+  </footer>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+  <script>
+    const socket = io();
+    const chart = document.getElementById("chart");
+    const els = {};   // id -> { bar, count }
+    const counts = {};
+
+    function render() {
+      const max = Math.max(10, ...Object.values(counts));
+      for (const [id, n] of Object.entries(counts)) {
+        els[id].bar.style.height = (n / max) * 100 + "%";
+        els[id].count.textContent = n;
+      }
+    }
+
+    socket.on("state", ({ bars, joinUrl, players }) => {
+      chart.innerHTML = "";
+      for (const b of bars) {
+        const col = document.createElement("div");
+        col.className = "col";
+        col.innerHTML = `<div class="count">0</div><div class="track"><div class="bar"></div></div><div class="label"></div>`;
+        const bar = col.querySelector(".bar");
+        bar.style.background = b.color;
+        bar.style.setProperty("--glow", b.color + "66");
+        col.querySelector(".label").textContent = b.label;
+        els[b.id] = { bar, count: col.querySelector(".count") };
+        counts[b.id] = b.count;
+        chart.appendChild(col);
+      }
+      render();
+      setPlayers(players);
+
+      document.getElementById("joinUrl").textContent = joinUrl.replace("http://", "");
+      if (window.qrcode) {
+        const qr = qrcode(0, "M");
+        qr.addData(joinUrl);
+        qr.make();
+        document.getElementById("qr").src = qr.createDataURL(6, 0);
+      }
+    });
+
+    socket.on("update", ({ id, count }) => {
+      counts[id] = count;
+      render();
+      const bar = els[id].bar;
+      bar.classList.remove("bump"); void bar.offsetWidth; bar.classList.add("bump");
+    });
+
+    // Display counts as a connection too, so subtract 1 for it.
+    function setPlayers(n) {
+      const phones = Math.max(0, n - 1);
+      document.getElementById("players").textContent = `${phones} phone${phones === 1 ? "" : "s"} connected`;
+    }
+    socket.on("players", setPlayers);
+
+    socket.on("counts", (list) => {
+      for (const { id, count } of list) counts[id] = count;
+      render();
+    });
+
+    // Reset only shows when the main screen is opened as /display?key=YOUR_ADMIN_KEY
+    const adminKey = new URLSearchParams(location.search).get("key");
+    const resetBtn = document.getElementById("reset");
+    if (adminKey) resetBtn.hidden = false;
+    resetBtn.onclick = () => {
+      if (confirm("Reset all bars to zero?")) socket.emit("reset", adminKey);
+    };
+    socket.on("resetDenied", () => alert("Wrong admin key — reset refused."));
+  </script>
+</body>
+</html>

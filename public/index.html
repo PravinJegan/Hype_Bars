@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Hype Bars</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f0f14; color: #fff;
+      display: flex; flex-direction: column;
+      padding: 16px; gap: 12px;
+      user-select: none; -webkit-user-select: none; touch-action: manipulation;
+    }
+    h1 { margin: 0; font-size: 1.3rem; text-align: center; }
+    #status { text-align: center; font-size: .85rem; color: #9ca3af; }
+    #buttons { flex: 1; display: grid; gap: 12px; }
+    button {
+      border: 0; border-radius: 18px; color: #fff;
+      font-size: 1.6rem; font-weight: 800; letter-spacing: .02em;
+      text-shadow: 0 2px 4px rgba(0,0,0,.35);
+      box-shadow: 0 6px 0 rgba(0,0,0,.35);
+      transition: transform .05s, box-shadow .05s;
+    }
+    button:active, button.pressed { transform: translateY(5px); box-shadow: 0 1px 0 rgba(0,0,0,.35); }
+    #mine { text-align: center; font-size: .9rem; color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <h1>Tap to hype!</h1>
+  <div id="status">Connecting…</div>
+  <div id="buttons"></div>
+  <div id="mine">Your taps: <b id="tapCount">0</b></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const buttonsEl = document.getElementById("buttons");
+    const statusEl = document.getElementById("status");
+    const tapCountEl = document.getElementById("tapCount");
+    let taps = 0;
+
+    socket.on("connect", () => (statusEl.textContent = "Connected"));
+    socket.on("disconnect", () => (statusEl.textContent = "Reconnecting…"));
+
+    socket.on("state", ({ bars }) => {
+      buttonsEl.innerHTML = "";
+      buttonsEl.style.gridTemplateRows = `repeat(${bars.length}, 1fr)`;
+      for (const bar of bars) {
+        const btn = document.createElement("button");
+        btn.textContent = bar.label;
+        btn.style.background = bar.color;
+        // pointerdown fires instantly on touch (no 300ms click delay)
+        btn.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          socket.emit("click", bar.id);
+          tapCountEl.textContent = ++taps;
+          if (navigator.vibrate) navigator.vibrate(15);
+        });
+        buttonsEl.appendChild(btn);
+      }
+    });
+  </script>
+</body>
+</html>

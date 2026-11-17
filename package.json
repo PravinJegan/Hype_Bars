@@ -1,0 +1,17 @@
+{
+  "name": "hype-bars",
+  "version": "1.0.0",
+  "description": "Live hype bars: a main screen shows bars, phones tap buttons to grow them",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "live": "node live.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
