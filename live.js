@@ -13,7 +13,6 @@ const path = require("path");
 const PORT = process.env.PORT || 3000;
 const ADMIN_KEY = process.env.ADMIN_KEY || crypto.randomBytes(6).toString("hex");
 const VERCEL_PROJECT = process.env.VERCEL_PROJECT || "hype-bars";
-const REDIRECT_DIR = path.join(__dirname, "vercel-redirect");
 
 let tunnel, server, shuttingDown = false;
 
@@ -47,28 +46,20 @@ function startTunnel() {
   });
 }
 
-// Deploys a tiny Vercel project whose only job is to redirect every path to the tunnel.
-// Returns the fixed production URL, or null if Vercel isn't available.
+// Points vercel.json's redirect at the tunnel and deploys it. Vercel only serves the
+// redirect (vercel.json disables building), so the Node server itself never runs there.
+// Returns { url } with the fixed production URL, or { error }.
 async function pointVercelAt(tunnelUrl) {
-  fs.mkdirSync(path.join(REDIRECT_DIR, "public"), { recursive: true });
-  fs.writeFileSync(
-    path.join(REDIRECT_DIR, "vercel.json"),
-    JSON.stringify(
-      {
-        redirects: [{ source: "/(.*)", destination: `${tunnelUrl}/$1`, permanent: false }],
-        headers: [{ source: "/(.*)", headers: [{ key: "Cache-Control", value: "no-store" }] }],
-      },
-      null,
-      2
-    ) + "\n"
-  );
-  fs.writeFileSync(path.join(REDIRECT_DIR, "public", "index.html"), "<!doctype html><title>Hype Bars</title><p>Hype Bars isn't live right now.</p>\n");
+  const configPath = path.join(__dirname, "vercel.json");
+  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  config.redirects[0].destination = `${tunnelUrl}/$1`;
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
 
-  if (!fs.existsSync(path.join(REDIRECT_DIR, ".vercel", "project.json"))) {
-    const link = await run("vercel", ["link", "--yes", "--project", VERCEL_PROJECT], { cwd: REDIRECT_DIR });
+  if (!fs.existsSync(path.join(__dirname, ".vercel", "project.json"))) {
+    const link = await run("vercel", ["link", "--yes", "--project", VERCEL_PROJECT], { cwd: __dirname });
     if (link.code !== 0) return { error: link.out };
   }
-  const dep = await run("vercel", ["deploy", "--prod", "--yes"], { cwd: REDIRECT_DIR });
+  const dep = await run("vercel", ["deploy", "--prod", "--yes"], { cwd: __dirname });
   if (dep.code !== 0) return { error: dep.out };
 
   // Prefer the alias Vercel reports (e.g. https://hype-bars.vercel.app) over the one-off deployment URL.
