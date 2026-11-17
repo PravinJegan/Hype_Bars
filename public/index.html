@@ -26,13 +26,24 @@
     }
     button:active, button.pressed { transform: translateY(5px); box-shadow: 0 1px 0 rgba(0,0,0,.35); }
     #mine { text-align: center; font-size: .9rem; color: #9ca3af; }
+    [hidden] { display: none !important; }
+    #waiting { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 16px; }
+    #waiting .big { font-size: 3.5rem; animation: pulse 1.4s ease-in-out infinite; }
+    #waiting p { margin: 0; font-size: 1.3rem; font-weight: 700; }
+    #waiting small { color: #9ca3af; font-size: 1rem; }
+    @keyframes pulse { 50% { transform: scale(1.15); } }
   </style>
 </head>
 <body>
   <h1>Tap to hype!</h1>
   <div id="status">Connecting…</div>
-  <div id="buttons"></div>
-  <div id="mine">Your taps: <b id="tapCount">0</b></div>
+  <div id="waiting">
+    <div class="big">🔥</div>
+    <p>You're in!</p>
+    <small>Waiting for the host to start…</small>
+  </div>
+  <div id="buttons" hidden></div>
+  <div id="mine" hidden>Your taps: <b id="tapCount">0</b></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -45,7 +56,16 @@
     socket.on("connect", () => (statusEl.textContent = "Connected"));
     socket.on("disconnect", () => (statusEl.textContent = "Reconnecting…"));
 
-    socket.on("state", ({ bars }) => {
+    function showPhase(phase) {
+      const live = phase === "live";
+      document.getElementById("waiting").hidden = live;
+      buttonsEl.hidden = !live;
+      document.getElementById("mine").hidden = !live;
+    }
+    socket.on("phase", showPhase);
+
+    socket.on("state", ({ bars, phase }) => {
+      showPhase(phase);
       buttonsEl.innerHTML = "";
       buttonsEl.style.gridTemplateRows = `repeat(${bars.length}, 1fr)`;
       for (const bar of bars) {

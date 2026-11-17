@@ -57,8 +57,11 @@ function joinUrlFor(socket) {
   return `${proto}://${host}`;
 }
 
+// "lobby" = start screen, taps ignored. "live" = bars showing, taps count.
+let phase = "lobby";
+
 function sendState(target, joinUrl) {
-  target.emit("state", { bars, joinUrl, players: io.engine.clientsCount });
+  target.emit("state", { bars, joinUrl, phase, players: io.engine.clientsCount });
 }
 
 io.on("connection", (socket) => {
@@ -70,6 +73,7 @@ io.on("connection", (socket) => {
   let clicksInWindow = 0;
 
   socket.on("click", (barId) => {
+    if (phase !== "live") return;
     const now = Date.now();
     if (now - windowStart > 1000) {
       windowStart = now;
@@ -84,9 +88,17 @@ io.on("connection", (socket) => {
   });
 
   socket.on("reset", (key) => {
-    if (key !== ADMIN_KEY) return socket.emit("resetDenied");
+    if (key !== ADMIN_KEY) return socket.emit("denied");
     bars.forEach((b) => (b.count = 0));
     io.emit("counts", bars.map(({ id, count }) => ({ id, count })));
+  });
+
+  // Host switches between the start screen and the bars screen.
+  socket.on("setPhase", ({ key, to } = {}) => {
+    if (key !== ADMIN_KEY) return socket.emit("denied");
+    if (to !== "lobby" && to !== "live") return;
+    phase = to;
+    io.emit("phase", phase);
   });
 
   socket.on("disconnect", () => io.emit("players", io.engine.clientsCount));
