@@ -6,7 +6,7 @@
   "redirects": [
     {
       "source": "/(.*)",
-      "destination": "https://avatar-turbo-dozen-guest.trycloudflare.com/$1",
+      "destination": "https://identification-shadow-proposition-bride.trycloudflare.com/$1",
       "permanent": false
     }
   ],
