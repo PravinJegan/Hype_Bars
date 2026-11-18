@@ -1,24 +1,28 @@
 // Starts a free Cloudflare Tunnel + the Hype Bars server so anyone can join from anywhere,
-// then points a fixed Vercel link (e.g. https://hype-bars.vercel.app) at the tunnel.
+// then points your fixed Vercel link at the tunnel by updating vercel.json and pushing it
+// to GitHub (Vercel redeploys automatically on push).
 //
 // Usage: npm run live
-//   needs `cloudflared` (brew install cloudflared)
-//   and, for the fixed Vercel link, `vercel` logged in (vercel login).
-//   Set NO_VERCEL=1 to skip Vercel and just use the Cloudflare link.
+//   needs `cloudflared` (brew install cloudflared) and git push access to this repo.
+//   NO_VERCEL=1 npm run live   -> skip Vercel, just use the Cloudflare link.
 const { spawn } = require("child_process");
 const crypto = require("crypto");
 const fs = require("fs");
+const https = require("https");
 const path = require("path");
+
+// Your fixed Vercel link. Change this if your Vercel project's address changes.
+const VERCEL_URL = (process.env.VERCEL_URL || "https://sch200-leaders.vercel.app").replace(/\/$/, "");
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_KEY = process.env.ADMIN_KEY || crypto.randomBytes(6).toString("hex");
-const VERCEL_PROJECT = process.env.VERCEL_PROJECT || "hype-bars";
+const USE_VERCEL = !process.env.NO_VERCEL;
 
 let tunnel, server, shuttingDown = false;
 
-function run(cmd, args, opts = {}) {
+function run(cmd, args) {
   return new Promise((resolve) => {
-    const p = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"], ...opts });
+    const p = spawn(cmd, args, { cwd: __dirname, stdio: ["ignore", "pipe", "pipe"] });
     let out = "";
     p.stdout.on("data", (d) => (out += d));
     p.stderr.on("data", (d) => (out += d));
@@ -46,27 +50,44 @@ function startTunnel() {
   });
 }
 
-// Points vercel.json's redirect at the tunnel and deploys it. Vercel only serves the
-// redirect (vercel.json disables building), so the Node server itself never runs there.
-// Returns { url } with the fixed production URL, or { error }.
-async function pointVercelAt(tunnelUrl) {
+// Updates vercel.json's redirect to the tunnel, then commits and pushes just that file.
+async function pushRedirect(tunnelUrl) {
+  // Get any edits made on github.com first, so the push isn't rejected.
+  const pull = await run("git", ["pull", "--rebase", "--autostash", "-q"]);
+  if (pull.code !== 0) return "git pull failed:\n" + pull.out;
+
   const configPath = path.join(__dirname, "vercel.json");
   const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
   config.redirects[0].destination = `${tunnelUrl}/$1`;
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
 
-  if (!fs.existsSync(path.join(__dirname, ".vercel", "project.json"))) {
-    const link = await run("vercel", ["link", "--yes", "--project", VERCEL_PROJECT], { cwd: __dirname });
-    if (link.code !== 0) return { error: link.out };
-  }
-  const dep = await run("vercel", ["deploy", "--prod", "--yes"], { cwd: __dirname });
-  if (dep.code !== 0) return { error: dep.out };
+  const commit = await run("git", ["commit", "-q", "-m", `Point Vercel at ${tunnelUrl}`, "--", "vercel.json"]);
+  if (commit.code !== 0) return "git commit failed:\n" + commit.out;
+  const push = await run("git", ["push", "-q"]);
+  if (push.code !== 0) return "git push failed:\n" + push.out;
+  return null;
+}
 
-  // Prefer the alias Vercel reports (e.g. https://hype-bars.vercel.app) over the one-off deployment URL.
-  const aliased = dep.out.match(/Aliased:?\s*(https:\/\/[^\s\]]+)/i);
-  const anyUrl = dep.out.match(/https:\/\/[a-z0-9.-]+\.vercel\.app/gi) || [];
-  const shortest = anyUrl.sort((a, b) => a.length - b.length)[0];
-  return { url: (aliased && aliased[1]) || shortest || null };
+// Asks Vercel where it currently redirects to (without following the redirect).
+function vercelTarget() {
+  return new Promise((resolve) => {
+    const req = https.request(VERCEL_URL + "/", { method: "HEAD", timeout: 8000 }, (res) => {
+      res.resume();
+      resolve(res.headers.location || "");
+    });
+    req.on("error", () => resolve(""));
+    req.on("timeout", () => req.destroy());
+    req.end();
+  });
+}
+
+async function waitForVercel(tunnelUrl, maxSeconds = 120) {
+  const start = Date.now();
+  while (Date.now() - start < maxSeconds * 1000) {
+    if ((await vercelTarget()).startsWith(tunnelUrl)) return true;
+    await new Promise((r) => setTimeout(r, 4000));
+  }
+  return false;
 }
 
 function startServer(publicUrl) {
@@ -88,6 +109,14 @@ function shutdown(code) {
 process.on("SIGINT", () => shutdown(0));
 process.on("SIGTERM", () => shutdown(0));
 
+function printLinks(publicUrl, tunnelUrl) {
+  console.log("\nHype Bars is live!\n");
+  console.log(`  Main screen (keep private):  ${publicUrl}/display?key=${ADMIN_KEY}`);
+  console.log(`  People join at:              ${publicUrl}`);
+  if (publicUrl !== tunnelUrl) console.log(`  (forwards to:                ${tunnelUrl})`);
+  console.log("\n  Keep this window open and your Mac awake. Press Ctrl+C to stop.\n");
+}
+
 (async () => {
   let tunnelUrl;
   try {
@@ -97,26 +126,29 @@ process.on("SIGTERM", () => shutdown(0));
     return shutdown(1);
   }
 
-  // PUBLIC_URL set = you manage the Vercel redirect yourself; just show that link.
-  let publicUrl = process.env.PUBLIC_URL ? process.env.PUBLIC_URL.replace(/\/$/, "") : tunnelUrl;
-  if (!process.env.NO_VERCEL && !process.env.PUBLIC_URL) {
-    console.log("Pointing your Vercel link at the tunnel (takes ~20-40s)…");
-    const v = await pointVercelAt(tunnelUrl);
-    if (v.url) {
-      publicUrl = v.url;
-    } else {
-      console.error("\n⚠️  Couldn't update the Vercel link, so using the Cloudflare link instead.");
-      console.error("   If you're not logged in, run: vercel login");
-      if (v.error) console.error("   Vercel said: " + v.error.trim().split("\n").slice(-3).join("\n   "));
-    }
+  if (!USE_VERCEL) {
+    startServer(tunnelUrl);
+    return printLinks(tunnelUrl, tunnelUrl);
   }
 
-  startServer(publicUrl);
+  // Start the server right away (QR shows the Vercel link), then update Vercel.
+  startServer(VERCEL_URL);
+  console.log(`Tunnel ready: ${tunnelUrl}`);
+  console.log("Pushing the new link to GitHub so Vercel forwards to it…");
+  const err = await pushRedirect(tunnelUrl);
+  if (err) {
+    console.error("\n⚠️  Couldn't update Vercel automatically:\n   " + err.trim().split("\n").join("\n   "));
+    console.error(`\n   Use the Cloudflare link directly for now: ${tunnelUrl}`);
+    console.error("   (Restart with NO_VERCEL=1 npm run live so the QR code shows that link.)\n");
+    return;
+  }
 
-  console.log("\n🔥 Hype Bars is live!\n");
-  console.log(`  Main screen (keep private):  ${publicUrl}/display?key=${ADMIN_KEY}`);
-  console.log(`  People join at:              ${publicUrl}`);
-  if (publicUrl !== tunnelUrl) console.log(`  (forwards to:                ${tunnelUrl})`);
-  console.log("\n  The link can take ~10-30 seconds to start working.");
-  console.log("  Keep this window open and your Mac awake. Press Ctrl+C to stop.\n");
+  console.log("Waiting for Vercel to redeploy (usually 20-60s)…");
+  if (await waitForVercel(tunnelUrl)) {
+    printLinks(VERCEL_URL, tunnelUrl);
+  } else {
+    console.error("\n⚠️  Vercel hasn't picked up the new link yet. Check the Deployments tab on vercel.com.");
+    console.error(`   Meanwhile the Cloudflare link works directly: ${tunnelUrl}`);
+    printLinks(VERCEL_URL, tunnelUrl);
+  }
 })();

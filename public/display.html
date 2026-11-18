@@ -14,23 +14,44 @@
     }
     [hidden] { display: none !important; }
     button.ghost { background: #1f2937; color: #d1d5db; border: 1px solid #374151; border-radius: 8px; padding: 6px 14px; cursor: pointer; font: inherit; }
+    button.ghost:hover { background: #273244; }
 
     /* ---------- Start screen ---------- */
-    #lobby { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3.5vh; text-align: center; }
-    #lobby h1 { margin: 0; font-size: clamp(3rem, 9vw, 8rem); line-height: 1; letter-spacing: -.02em;
+    #lobby { flex: 1; display: flex; align-items: center; justify-content: center; gap: 5vw; flex-wrap: wrap; }
+    .lobbyMain { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3.5vh; text-align: center; }
+    .lobbyMain h1 { margin: 0; font-size: clamp(3rem, 8vw, 7rem); line-height: 1; letter-spacing: -.02em;
       background: linear-gradient(90deg, #ef4444, #eab308, #22c55e, #3b82f6); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    #lobby .sub { font-size: clamp(1.1rem, 2.4vw, 2rem); color: #d1d5db; margin: 0; }
-    #lobby .qrBig { width: min(38vh, 70vw); background: #fff; padding: 14px; border-radius: 16px; box-shadow: 0 0 60px #ffffff22; }
-    #lobby .url { font-size: clamp(1rem, 2.2vw, 1.8rem); font-weight: 700; word-break: break-all; }
-    #lobby .count { font-size: clamp(1.2rem, 2.6vw, 2.2rem); color: #9ca3af; }
-    #lobby .count b { color: #fff; font-size: 1.4em; font-variant-numeric: tabular-nums; }
+    .lobbyMain .sub { font-size: clamp(1.1rem, 2.2vw, 1.8rem); color: #d1d5db; margin: 0; }
+    .lobbyMain .qrBig { width: min(36vh, 70vw); background: #fff; padding: 14px; border-radius: 16px; }
+    .lobbyMain .url { font-size: clamp(1rem, 2vw, 1.7rem); font-weight: 700; word-break: break-all; }
+    .lobbyMain .count { font-size: clamp(1.2rem, 2.4vw, 2rem); color: #9ca3af; }
+    .lobbyMain .count b { color: #fff; font-size: 1.4em; font-variant-numeric: tabular-nums; }
     #startBtn {
       font: inherit; font-size: clamp(1.4rem, 3vw, 2.4rem); font-weight: 800; color: #fff; cursor: pointer;
       background: linear-gradient(90deg, #ef4444, #f97316); border: 0; border-radius: 999px; padding: .6em 2.2em;
-      box-shadow: 0 8px 30px #ef444466; transition: transform .1s;
+      transition: transform .1s;
     }
     #startBtn:hover { transform: scale(1.05); }
     #noKey { color: #6b7280; font-size: .95rem; }
+
+    /* Host-only settings panel */
+    #settings { width: min(420px, 100%); background: #171720; border: 1px solid #2a2a36; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    #settings h2 { margin: 0; font-size: 1.25rem; display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+    #settings h2 small { font-size: .8rem; font-weight: 400; color: #9ca3af; }
+    .barRow { display: flex; align-items: center; gap: 10px; }
+    .barRow input[type=color] { width: 44px; height: 44px; padding: 0; border: 2px solid #374151; border-radius: 10px; background: none; cursor: pointer; flex: none; }
+    .barRow input[type=color]::-webkit-color-swatch-wrapper { padding: 3px; }
+    .barRow input[type=color]::-webkit-color-swatch { border: 0; border-radius: 6px; }
+    .barRow input[type=text] { flex: 1; min-width: 0; font: inherit; font-size: 1.05rem; color: #fff; background: #0f0f14; border: 1px solid #374151; border-radius: 10px; padding: 10px 12px; }
+    .barRow input[type=text]:focus { outline: 2px solid #f97316; border-color: transparent; }
+    .barRow input.bad { border-color: #ef4444; }
+    .barRow .remove { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; background: #262633; color: #9ca3af; font-size: 1.2rem; cursor: pointer; }
+    .barRow .remove:hover { background: #3f1d1d; color: #fca5a5; }
+    .barRow .remove:disabled { opacity: .3; cursor: default; background: #262633; color: #9ca3af; }
+    #addBar { align-self: flex-start; }
+    #addBar:disabled { opacity: .4; cursor: default; }
+    #saveMsg { font-size: .85rem; color: #9ca3af; min-height: 1.2em; }
+    #saveMsg.err { color: #fca5a5; }
 
     /* ---------- Bars screen ---------- */
     #live { flex: 1; display: flex; flex-direction: column; gap: 3vh; min-height: 0; }
@@ -39,18 +60,17 @@
     .join { display: flex; align-items: center; gap: 1rem; font-size: clamp(1rem, 1.6vw, 1.5rem); color: #d1d5db; }
     .join img { width: clamp(90px, 10vw, 160px); background: #fff; padding: 6px; border-radius: 8px; }
     .join b { color: #fff; display: block; font-size: 1.1em; word-break: break-all; }
-    #chart { flex: 1; display: flex; align-items: flex-end; justify-content: center; gap: 4vw; min-height: 0; }
-    .col { flex: 1; max-width: 220px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 1vh; }
+    #chart { flex: 1; display: flex; align-items: flex-end; justify-content: center; gap: 3vw; min-height: 0; }
+    .col { flex: 1; max-width: 220px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 1vh; min-width: 0; }
     .col .num { font-size: clamp(1.5rem, 4vw, 3.5rem); font-weight: 800; font-variant-numeric: tabular-nums; }
     .track { width: 100%; flex: 1; display: flex; align-items: flex-end; }
+    /* Short, non-bouncy transition so rapid updates move smoothly instead of lagging behind. */
     .bar {
       width: 100%; height: 0%; border-radius: 14px 14px 4px 4px;
-      transition: height .25s cubic-bezier(.2,.9,.3,1.2);
-      box-shadow: 0 0 30px var(--glow);
+      transition: height .12s ease-out;
+      will-change: height;
     }
-    .bar.bump { animation: bump .2s; }
-    @keyframes bump { 50% { filter: brightness(1.5); } }
-    .label { font-size: clamp(1rem, 2vw, 1.6rem); font-weight: 600; text-align: center; }
+    .label { font-size: clamp(1rem, 2vw, 1.6rem); font-weight: 600; text-align: center; overflow-wrap: anywhere; }
     footer { display: flex; justify-content: space-between; align-items: center; gap: 1rem; color: #6b7280; font-size: .9rem; }
     footer .host { display: flex; gap: .6rem; }
   </style>
@@ -58,19 +78,29 @@
 <body>
   <!-- Start screen -->
   <section id="lobby">
-    <h1>🔥 Hype Bars</h1>
-    <p class="sub">Scan to join, then get ready to tap!</p>
-    <img class="qrBig qr" alt="QR code to join" />
-    <div class="url joinUrl">…</div>
-    <div class="count"><b class="phones">0</b> <span class="phonesWord">phones</span> joined</div>
-    <button id="startBtn" hidden>Start ▶</button>
-    <div id="noKey" hidden>Waiting for the host to start…</div>
+    <aside id="settings" hidden>
+      <h2>Title <small>saves automatically</small></h2>
+      <div class="barRow"><input type="text" id="titleInput" maxlength="40" placeholder="Title" /></div>
+      <h2>Bars</h2>
+      <div id="barRows"></div>
+      <button class="ghost" id="addBar">+ Add bar</button>
+      <div id="saveMsg"></div>
+    </aside>
+    <div class="lobbyMain">
+      <h1 class="titleText">Hype Bars</h1>
+      <p class="sub">Scan to join, then get ready to tap!</p>
+      <img class="qrBig qr" alt="QR code to join" />
+      <div class="url joinUrl">…</div>
+      <div class="count"><b class="phones">0</b> <span class="phonesWord">phones</span> joined</div>
+      <button id="startBtn" hidden>Start ▶</button>
+      <div id="noKey" hidden>Waiting for the host to start…</div>
+    </div>
   </section>
 
   <!-- Bars screen -->
   <section id="live" hidden>
     <header>
-      <h1>🔥 Hype Bars</h1>
+      <h1 class="titleText">Hype Bars</h1>
       <div class="join">
         <div>Join at<b class="joinUrl">…</b></div>
         <img class="qr" alt="QR code to join" />
@@ -95,12 +125,16 @@
     const chart = $("#chart");
     const els = {};   // id -> { bar, num }
     const counts = {};
+    const MAX_BARS = 8;
+    const MAX_LABEL = 24;
+    const PALETTE = ["#ef4444", "#3b82f6", "#22c55e", "#eab308", "#a855f7", "#f97316", "#ec4899", "#14b8a6"];
 
     // Host controls only appear when opened as /display?key=YOUR_ADMIN_KEY
     const adminKey = new URLSearchParams(location.search).get("key");
     $("#startBtn").hidden = !adminKey;
     $("#noKey").hidden = !!adminKey;
     $(".host").hidden = !adminKey;
+    $("#settings").hidden = !adminKey;
 
     function showPhase(phase) {
       $("#lobby").hidden = phase !== "lobby";
@@ -122,21 +156,142 @@
       $$(".phonesWord").forEach((e) => (e.textContent = phones === 1 ? "phone" : "phones"));
     }
 
-    socket.on("state", ({ bars, joinUrl, phase, players }) => {
+    function buildChart(bars) {
       chart.innerHTML = "";
+      for (const k of Object.keys(els)) delete els[k];
+      for (const k of Object.keys(counts)) delete counts[k];
       for (const b of bars) {
         const col = document.createElement("div");
         col.className = "col";
         col.innerHTML = `<div class="num">0</div><div class="track"><div class="bar"></div></div><div class="label"></div>`;
         const bar = col.querySelector(".bar");
         bar.style.background = b.color;
-        bar.style.setProperty("--glow", b.color + "66");
         col.querySelector(".label").textContent = b.label;
         els[b.id] = { bar, num: col.querySelector(".num") };
         counts[b.id] = b.count;
         chart.appendChild(col);
       }
       render();
+    }
+
+    // ---------- Host settings: names + colors ----------
+    let draft = [];          // [{label, color}] being edited
+    let saveTimer = null;
+
+    function setMsg(text, isErr) {
+      const m = $("#saveMsg");
+      m.textContent = text;
+      m.classList.toggle("err", !!isErr);
+    }
+
+    function draftProblem() {
+      if (draft.some((b) => !b.label.trim())) return "Every bar needs a name.";
+      return null;
+    }
+
+    function renderRows() {
+      const wrap = $("#barRows");
+      wrap.innerHTML = "";
+      draft.forEach((b, i) => {
+        const row = document.createElement("div");
+        row.className = "barRow";
+
+        const color = document.createElement("input");
+        color.type = "color";
+        color.value = b.color;
+        color.title = "Pick a color";
+        color.addEventListener("input", () => { b.color = color.value; scheduleSave(); });
+
+        const name = document.createElement("input");
+        name.type = "text";
+        name.value = b.label;
+        name.maxLength = MAX_LABEL;
+        name.placeholder = `Bar ${i + 1} name`;
+        name.classList.toggle("bad", !b.label.trim());
+        name.addEventListener("input", () => {
+          b.label = name.value;
+          name.classList.toggle("bad", !b.label.trim());
+          scheduleSave();
+        });
+
+        const remove = document.createElement("button");
+        remove.className = "remove";
+        remove.textContent = "×";
+        remove.title = "Remove this bar";
+        remove.disabled = draft.length <= 1;
+        remove.addEventListener("click", () => { draft.splice(i, 1); renderRows(); scheduleSave(true); });
+
+        row.append(color, name, remove);
+        wrap.appendChild(row);
+      });
+      $("#addBar").disabled = draft.length >= MAX_BARS;
+    }
+
+    function scheduleSave(now) {
+      clearTimeout(saveTimer);
+      const problem = draftProblem();
+      if (problem) return setMsg(problem, true);
+      setMsg("Saving…");
+      saveTimer = setTimeout(saveNow, now ? 0 : 400);
+    }
+
+    // Returns false if the settings can't be saved yet.
+    function saveNow() {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      const problem = draftProblem();
+      if (problem) { setMsg(problem, true); return false; }
+      socket.emit("setBars", { key: adminKey, bars: draft.map((b) => ({ label: b.label.trim(), color: b.color })) });
+      return true;
+    }
+
+    $("#addBar").onclick = () => {
+      if (draft.length >= MAX_BARS) return;
+      const used = new Set(draft.map((b) => b.color));
+      const color = PALETTE.find((c) => !used.has(c)) || PALETTE[draft.length % PALETTE.length];
+      draft.push({ label: "", color });
+      renderRows();
+      $$("#barRows input[type=text]")[draft.length - 1].focus();
+      setMsg("Give the new bar a name.", true);
+    };
+
+    // ---------- Title ----------
+    const titleInput = $("#titleInput");
+    let titleTimer = null;
+
+    function showTitle(t) {
+      $$(".titleText").forEach((e) => (e.textContent = t));
+      document.title = `${t} — Main Screen`;
+      if (document.activeElement !== titleInput && !titleTimer) titleInput.value = t;
+    }
+
+    titleInput.addEventListener("input", () => {
+      clearTimeout(titleTimer);
+      titleInput.classList.toggle("bad", !titleInput.value.trim());
+      if (!titleInput.value.trim()) { titleTimer = null; return setMsg("The title can't be empty.", true); }
+      setMsg("Saving…");
+      titleTimer = setTimeout(() => {
+        titleTimer = null;
+        socket.emit("setTitle", { key: adminKey, title: titleInput.value.trim() });
+      }, 400);
+    });
+    socket.on("title", showTitle);
+
+    socket.on("barsSaved", () => setMsg("Saved ✓ — phones updated."));
+    socket.on("barsError", (msg) => setMsg(msg, true));
+
+    // Only reload the editor from the server when the host isn't mid-edit.
+    function syncDraft(bars) {
+      if (saveTimer || $("#settings").contains(document.activeElement)) return;
+      draft = bars.map((b) => ({ label: b.label, color: b.color }));
+      renderRows();
+    }
+
+    // ---------- Server events ----------
+    socket.on("state", ({ bars, title, joinUrl, phase, players }) => {
+      showTitle(title);
+      buildChart(bars);
+      syncDraft(bars);
       setPlayers(players);
       showPhase(phase);
 
@@ -150,24 +305,31 @@
       }
     });
 
+    socket.on("bars", (bars) => { buildChart(bars); syncDraft(bars); });
     socket.on("phase", showPhase);
     socket.on("players", setPlayers);
 
-    socket.on("update", ({ id, count }) => {
-      counts[id] = count;
-      render();
-      const bar = els[id].bar;
-      bar.classList.remove("bump"); void bar.offsetWidth; bar.classList.add("bump");
-    });
-
+    // Server sends bundled count changes ~20x/sec; draw at most once per frame.
+    let frameQueued = false;
     socket.on("counts", (list) => {
-      for (const { id, count } of list) counts[id] = count;
-      render();
+      for (const { id, count } of list) if (id in counts) counts[id] = count;
+      if (frameQueued) return;
+      frameQueued = true;
+      requestAnimationFrame(() => { frameQueued = false; render(); });
     });
 
     socket.on("denied", () => alert("Wrong admin key — the server refused that."));
 
-    $("#startBtn").onclick = () => socket.emit("setPhase", { key: adminKey, to: "live" });
+    $("#startBtn").onclick = () => {
+      // Save any unsaved edits first; messages arrive at the server in order.
+      if (titleTimer) {
+        clearTimeout(titleTimer); titleTimer = null;
+        if (titleInput.value.trim()) socket.emit("setTitle", { key: adminKey, title: titleInput.value.trim() });
+      }
+      if (saveTimer && !saveNow()) return;
+      if (draftProblem()) return setMsg(draftProblem(), true);
+      socket.emit("setPhase", { key: adminKey, to: "live" });
+    };
     $("#toLobby").onclick = () => socket.emit("setPhase", { key: adminKey, to: "lobby" });
     $("#reset").onclick = () => {
       if (confirm("Reset all bars to zero?")) socket.emit("reset", adminKey);
