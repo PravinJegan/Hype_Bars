@@ -80,7 +80,9 @@
       for (const bar of bars) {
         const btn = document.createElement("button");
         btn.textContent = bar.label;
-        btn.style.background = bar.color;
+        btn.style.background = bar.image
+          ? `linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url("${bar.image}") center / cover no-repeat, ${bar.color}`
+          : bar.color;
         // pointerdown fires instantly on touch (no 300ms click delay)
         btn.addEventListener("pointerdown", (e) => {
           e.preventDefault();

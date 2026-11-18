@@ -28,7 +28,19 @@ const BARS_FILE = process.env.BARS_FILE || path.join(__dirname, "bars.json");
 const MAX_BARS = 8;
 const MAX_LABEL = 24;
 
+// Custom bar images uploaded by the host live here (served at /uploads/...).
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, "uploads");
+const IMAGE_TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+const IMAGE_URL_RE = /^\/uploads\/([a-f0-9]{24}\.(?:jpg|png|webp))$/;
+
+// Returns the image URL if it's one of our uploads and the file exists, else null.
+function cleanImage(url) {
+  const m = IMAGE_URL_RE.exec(String(url || ""));
+  return m && fs.existsSync(path.join(UPLOAD_DIR, m[1])) ? url : null;
+}
+
 // Cleans up bar settings from the host (or bars.json). Returns null if unusable.
+// A bar can have an image; its color is still kept as a fallback.
 function cleanBars(list) {
   if (!Array.isArray(list) || list.length < 1 || list.length > MAX_BARS) return null;
   const out = [];
@@ -36,7 +48,10 @@ function cleanBars(list) {
     const label = String((b && b.label) || "").trim().slice(0, MAX_LABEL);
     const color = String((b && b.color) || "").toLowerCase();
     if (!label || !/^#[0-9a-f]{6}$/.test(color)) return null;
-    out.push({ id: `bar${out.length + 1}`, label, color, count: 0 });
+    const bar = { id: `bar${out.length + 1}`, label, color, count: 0 };
+    const image = cleanImage(b.image);
+    if (image) bar.image = image;
+    out.push(bar);
   }
   return out;
 }
@@ -65,7 +80,7 @@ function loadSettings() {
 
 function saveSettings() {
   try {
-    const data = { title, bars: bars.map(({ label, color }) => ({ label, color })) };
+    const data = { title, bars: bars.map(({ label, color, image }) => (image ? { label, color, image } : { label, color })) };
     fs.writeFileSync(BARS_FILE, JSON.stringify(data, null, 2) + "\n");
   } catch (e) {
     console.error("Couldn't save bars.json:", e.message);
@@ -87,6 +102,42 @@ const server = http.createServer(app);
 const io = new Server(server, { maxHttpBufferSize: 4096 });
 
 app.use(express.static(path.join(__dirname, "public")));
+
+// Uploaded bar images. File names are random and never reused, so they can be cached.
+app.use(
+  "/uploads",
+  express.static(UPLOAD_DIR, {
+    maxAge: "7d",
+    immutable: true,
+    setHeaders: (res) => res.setHeader("X-Content-Type-Options", "nosniff"),
+  })
+);
+
+// Host uploads a bar image (already shrunk in the browser). Only JPEG/PNG/WebP.
+app.post(
+  "/upload",
+  express.raw({ type: Object.keys(IMAGE_TYPES), limit: "3mb" }),
+  (req, res) => {
+    if (req.query.key !== ADMIN_KEY) return res.status(403).json({ error: "Wrong admin key." });
+    const ext = IMAGE_TYPES[(req.headers["content-type"] || "").split(";")[0].trim()];
+    if (!ext || !Buffer.isBuffer(req.body) || !req.body.length) {
+      return res.status(400).json({ error: "Please choose a JPG, PNG or WebP image." });
+    }
+    const name = `${crypto.randomBytes(12).toString("hex")}.${ext}`;
+    try {
+      fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+      fs.writeFileSync(path.join(UPLOAD_DIR, name), req.body);
+    } catch (e) {
+      console.error("Couldn't save upload:", e.message);
+      return res.status(500).json({ error: "Couldn't save the image." });
+    }
+    res.json({ url: `/uploads/${name}` });
+  }
+);
+app.use((err, req, res, next) => {
+  if (err && err.type === "entity.too.large") return res.status(413).json({ error: "That image is too big." });
+  next(err);
+});
 app.get("/display", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "display.html"))
 );
