@@ -6,7 +6,7 @@
   "redirects": [
     {
       "source": "/(.*)",
-      "destination": "https://watching-forms-fossil-joke.trycloudflare.com/$1",
+      "destination": "https://lessons-arc-physically-anti.trycloudflare.com/$1",
       "permanent": false
     }
   ],
